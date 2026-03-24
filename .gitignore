@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# MacOS trash
+.DS_Store
+
+# Log's file
+tasks.log
+
 # C extensions
 *.so
 
