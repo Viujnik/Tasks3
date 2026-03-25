@@ -4,10 +4,11 @@ from loguru import logger
 from src.sources import FileSource, ConsoleSource, APISource
 from src.tasks_models import Task
 from src.validators.errors import LenError, StatusError
+from src.queue import TaskQueue
 
 logger.add("tasks.log", rotation="10 MB", retention="1 week", encoding="utf-8")
 
-tasks = {"file": set(), "cli": set(), "api": set()}
+task_queue = TaskQueue()
 
 
 def get_task_deadline() -> datetime.datetime:
@@ -60,25 +61,33 @@ def create_task(current_user_id) -> None:
             logger.info(f"Пользователь с id: {created_task.payload["user_id"]} создал новую задачу:")
             logger.info(created_task.log_message(detailed=False))
             logger.debug(created_task.log_message(detailed=True))
-            tasks[task_type].add(created_task)
+
         else:
             task = source.get_task()
             logger.info(task.log_message(detailed=False))
             logger.debug(task.log_message(detailed=True))
-            tasks[task_type].add(task)
+            task_queue.add_task(task)
     except (TypeError, ValueError, LenError, StatusError) as e:
         logger.error(f"Ошибка валидации при создании задачи: {e}")
         print(f"Ошибка: {e}")
         return None
 
 
-def set_task_status(current_user_id, task_id: int, task_type: str, task_status: str):
+def set_task_status(current_user_id, task_id: int, task_status: str):
     try:
-        tasks_set = tasks[task_type]
-        for task in tasks_set:
+        for task in task_queue:
             if task.task_id == task_id:
                 task.status = task_status
                 logger.info(
                     f"Пользователь с  id {current_user_id} сменил статус задачи с id: {task_id} на {task_status}")
     except KeyError as e:
         print(e)
+
+
+def get_left_tasks(current_user_id: str, task_num: int):
+    count = 0
+    while task_queue and count < task_num:
+        count += 1
+        logger.info(
+            f"Пользователь с  id {current_user_id} удалил {count} левых задач из очереди")
+        print(task_queue.pop_left())
