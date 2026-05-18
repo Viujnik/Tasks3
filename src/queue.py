@@ -12,6 +12,7 @@ class TaskQueue:
 
     def __init__(self):
         self._tasks_queue = deque()
+        self._iter_index = 0
         self._archive = []
 
     def add_task(self, task: Task):
@@ -24,7 +25,15 @@ class TaskQueue:
         return self._tasks_queue[index]
 
     def __iter__(self) -> Iterator[Task]:
-        return iter(self._tasks_queue)
+        self._iter_index = 0
+        return self
+
+    def __next__(self) -> Task:
+        if self._iter_index >= len(self._tasks_queue):
+            raise StopIteration
+        task = self._tasks_queue[self._iter_index]
+        self._iter_index += 1
+        return task
 
     def filter(self, condition: Callable[[Task], bool]):
         for task in self._tasks_queue:
